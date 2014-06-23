@@ -10,11 +10,15 @@ cat > $MYCMD <<EOF
 set -x
 mkdir -p chroot
 mount -t tmpfs none /tmp -o size=16m,mode=1777
-cat - > /tmp/mtab <<EOFMTAB
+
+# We should actually use something like aufs for /etc
+# We cannot track mount now, since mount creates a new mtab file and tries to mv it over the current.
+cat - > /tmp/mtab <<MTAB
 rootfs / rootfs rw 0 0
 none /tmp tmpfs rw,relatime,size=16384k 0 0
-EOFMTAB
+MTAB
 mount -o bind /tmp/mtab /etc/mtab
+
 mount -o remount,rw /
 mount -t proc none /proc
 mount -t sysfs none /sys
@@ -43,9 +47,11 @@ ip link set up dev eth0
 ip ro add default dev eth0
 
 cd $MYDIR
-mkdir -p chroot cache
-mount -o loop,rw -t ext4 chroot.ext4 chroot
-mount -o loop,rw -t ext4 cache.ext4 cache
+mkdir -p live-build
+mount -o loop,rw -t ext4 live-build.ext4 live-build
+mkdir -p live-build/auto
+mount -o bind auto live-build/auto
+cd live-build
 
 # Now we have everything needed, including internet, we can finally do stuff
 
@@ -59,20 +65,13 @@ echo s > /proc/sysrq-trigger
 echo o > /proc/sysrq-trigger
 halt
 EOF
-if [ ! -e swap.file ]; then
-	dd if=/dev/zero of=swap.file bs=1024k count=4096
-	/sbin/mkswap swap.file
-fi
-if [ ! -e chroot.ext4 ]; then
-	dd if=/dev/zero of=chroot.ext4 bs=1024k count=4096
-	/sbin/mkfs.ext4 -F chroot.ext4
-fi
-if [ ! -e cache.ext4 ]; then
-	dd if=/dev/zero of=cache.ext4 bs=1024k count=4096
-	/sbin/mkfs.ext4 -F cache.ext4
+if [ ! -e live-build.ext4 ]; then
+	dd if=/dev/zero of=live-build.ext4 bs=1024k count=4096
+	/sbin/mkfs.ext4 -F live-build.ext4
 fi
 
 chmod a+x $MYCMD
-touch fakeroot.db
+touch fakeroot-uml.db
+# We need at least 256MB. The last time uml "crashed" squashfs was using > 100MB anonymous memory
 fakeroot -i fakeroot-uml.db -s fakeroot-uml.db linux init=$MYCMD mem=256M rootfstype=hostfs eth0=slirp,,${SLIRPCMD}
 
