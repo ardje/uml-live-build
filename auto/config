@@ -15,7 +15,5 @@ lb config noauto \
 	--architectures amd64 \
 	--memtest none \
 	--binary-images iso-hybrid \
+	--linux-flavours amd64 \
 	"${@}"
-#        --apt-recommends false \
-#	--ignore-system-defaults \
-#	--use-fakeroot true \
