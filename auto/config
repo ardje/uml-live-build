@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -e
+export http_proxy=http://192.168.0.46:3128
+export debian_mirror=http://ftp.nl.debian.org/debian
+lb config noauto \
+	--verbose \
+	--debug \
+	--apt apt \
+	--archive-areas "main contrib non-free" \
+	--apt-http-proxy ${http_proxy} \
+	--parent-mirror-bootstrap ${debian_mirror} \
+	--parent-mirror-chroot ${debian_mirror} \
+	--parent-mirror-binary ${debian_mirror} \
+	--architectures amd64 \
+	--memtest none \
+	--binary-images iso-hybrid \
+	"${@}"
+#        --apt-recommends false \
+#	--ignore-system-defaults \
+#	--use-fakeroot true \

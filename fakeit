@@ -1,0 +1,80 @@
+#!/bin/bash -x
+CMDDIR=$PWD/tmp
+mkdir -p $CMDDIR
+MYCMD=$CMDDIR/fakeit.linuxuml.$$
+MYDIR=$PWD
+SLIRPCMD=slirp-fullbolt
+cat > $MYCMD <<EOF
+#!/bin/bash
+# Set up our base linux system
+set -x
+mkdir -p chroot
+mount -t tmpfs none /tmp -o size=16m,mode=1777
+cat - > /tmp/mtab <<EOFMTAB
+rootfs / rootfs rw 0 0
+none /tmp tmpfs rw,relatime,size=16384k 0 0
+EOFMTAB
+mount -o bind /tmp/mtab /etc/mtab
+mount -o remount,rw /
+mount -t proc none /proc
+mount -t sysfs none /sys
+# needed, because we are not really root, so we can't chown root, which is done by dpkg-dev
+
+# Work around samhain bug in live-build (Unauthorized alteration of host file system)
+mkdir /tmp/fake-var
+mkdir /tmp/old-var
+mount -o bind /var /tmp/old-var
+ln -s /tmp/old-var/* /tmp/fake-var
+mount -o bind /tmp/fake-var /var
+
+# We need some common devices we can actually use
+mount -t tmpfs none /dev
+tar xvfz /usr/share/debootstrap/devices.tar.gz
+
+# This is where our uml modules are... Put them in the right place
+mount -o bind /usr/lib/uml/modules /lib/modules
+modprobe loop
+
+# We need networking
+export PATH=/sbin:/usr/sbin:/bin:/usr/bin
+export http_proxy=http://192.168.0.46:3128
+ip a add 10.0.2.15 dev eth0
+ip link set up dev eth0
+ip ro add default dev eth0
+
+cd $MYDIR
+mkdir -p chroot cache
+mount -o loop,rw -t ext4 chroot.ext4 chroot
+mount -o loop,rw -t ext4 cache.ext4 cache
+
+# Now we have everything needed, including internet, we can finally do stuff
+
+#lb build
+bash -i
+# umount
+echo s > /proc/sysrq-trigger
+# sync
+echo s > /proc/sysrq-trigger
+# poweroff
+echo o > /proc/sysrq-trigger
+halt
+EOF
+if [ ! -e swap.file ]; then
+	dd if=/dev/zero of=swap.file bs=1024k count=4096
+	/sbin/mkswap swap.file
+fi
+if [ ! -e chroot.ext4 ]; then
+	dd if=/dev/zero of=chroot.ext4 bs=1024k count=4096
+	/sbin/mkfs.ext4 -F chroot.ext4
+fi
+if [ ! -e cache.ext4 ]; then
+	dd if=/dev/zero of=cache.ext4 bs=1024k count=4096
+	/sbin/mkfs.ext4 -F cache.ext4
+fi
+
+chmod a+x $MYCMD
+touch fakeroot.db
+fakeroot -i fakeroot-uml.db -s fakeroot-uml.db linux init=$MYCMD mem=256M rootfstype=hostfs eth0=slirp,,${SLIRPCMD}
+
+exit 0
+chroot /home/ard/nas/src/drgt/test/chroot dpkg --force-depends --install /var/cache/apt/archives/base-files_7.1wheezy5_amd64.deb /var/cache/apt/archives/base-passwd_3.5.26_amd64.deb

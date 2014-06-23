@@ -1,0 +1,5 @@
+#!/bin/sh
+
+set -e
+export PATH=$PATH:/sbin:/usr/sbin
+lb build noauto "${@}" 2>&1 | tee build.log
