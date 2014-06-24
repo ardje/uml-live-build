@@ -49,8 +49,11 @@ ip ro add default dev eth0
 cd $MYDIR
 mkdir -p live-build
 mount -o loop,rw -t ext4 live-build.ext4 live-build
-mkdir -p live-build/auto
-mount -o bind auto live-build/auto
+for i in auto config scripts
+do
+mkdir -p $i live-build/$i
+mount -o bind $i live-build/$i
+done
 cd live-build
 
 # Now we have everything needed, including internet, we can finally do stuff
