@@ -15,5 +15,4 @@ sh -x /usr/bin/lb config noauto \
 	--architectures amd64 \
 	--memtest none \
 	--binary-images iso-hybrid \
-	--linux-packages linux-image-3.15.1-d525mw \
 	"${@}"
