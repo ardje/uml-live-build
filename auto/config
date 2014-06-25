@@ -15,4 +15,6 @@ sh -x /usr/bin/lb config noauto \
 	--architectures amd64 \
 	--memtest none \
 	--binary-images iso-hybrid \
+	--linux-flavours amd64 \
+	--linux-package linux-image-3.15.1-drgt-lbsucks \
 	"${@}"
