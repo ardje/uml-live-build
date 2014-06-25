@@ -6,4 +6,8 @@ then
 # serial console
 S0:S12345:respawn:/sbin/getty -a user -L ttyS0 115200 vt102
 EOF
+# Prevent 0170-sysvinit in live-boot from fucking our system
+# Known bug:
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=602788
+touch /var/lib/live/config/sysvinit
 fi
