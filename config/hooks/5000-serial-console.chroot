@@ -4,6 +4,6 @@ if ! grep -q "serial console" /etc/inittab
 then
 	cat - >> /etc/inittab <<EOF
 # serial console
-S0:S12345:respawn:/sbin/getty -L ttyS0 115200 vt102
+S0:S12345:respawn:/sbin/getty -a user -L ttyS0 115200 vt102
 EOF
 fi
